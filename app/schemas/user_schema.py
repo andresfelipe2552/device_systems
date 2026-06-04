@@ -36,6 +36,43 @@ class UserCreate(BaseModel):
     }
 
 
+# ── NUEVO: PUT – reemplaza todos los campos (hereda validaciones de UserCreate) ──
+class UserUpdate(UserCreate):
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "name": "Ana Torres Actualizada",
+                    "email": "ana.v2@device.com",
+                    "role": "support",
+                    "is_active": True,
+                }
+            ]
+        }
+    }
+
+
+# ── NUEVO: PATCH – todos los campos opcionales ──────────────────────────────────
+class UserPatch(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    role: Optional[RoleEnum] = None
+    is_active: Optional[bool] = None
+
+    @field_validator("name")
+    @classmethod
+    def name_min_length(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and len(v.strip()) < 3:
+            raise ValueError("El nombre debe tener mínimo 3 caracteres")
+        return v.strip() if v else v
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{"role": "support"}]
+        }
+    }
+
+
 class UserResponse(BaseModel):
     id: int
     name: str
