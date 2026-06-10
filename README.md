@@ -1,145 +1,122 @@
-# device_systems API
+# device_systems API — v2.0
 
-API REST para la **gestión de usuarios** del sistema `device_systems`, construida con **FastAPI** y validaciones **Pydantic v2**.
+API REST para la **gestión de usuarios** del sistema `device_systems`, construida con **FastAPI**, **SQLAlchemy** y validaciones **Pydantic v2**.
 
 ---
 
 ## Descripción
 
-`device_systems` expone un conjunto de endpoints para administrar usuarios internos. Cada usuario tiene nombre, correo electrónico, rol y estado activo. La API aplica validaciones automáticas, evita registros duplicados y retorna cabeceras HTTP personalizadas en cada respuesta.
+`device_systems` v2.0 evoluciona la versión anterior (datos en memoria) para incorporar **persistencia real** mediante una base de datos SQLite gestionada con SQLAlchemy. Expone un CRUD completo sobre el recurso `/users`.
 
 ---
 
-## Instalación de dependencias
+## Estructura del proyecto
+
+```
+device_systems/
+├── app/
+│   ├── main.py                          # Punto de entrada FastAPI
+│   ├── database/
+│   │   └── connection.py                # Engine, SessionLocal, Base, create_tables()
+│   ├── models/
+│   │   └── user_model.py                # Modelo SQLAlchemy → tabla 'users'
+│   ├── schemas/
+│   │   └── user_schema.py               # Schemas Pydantic: Create, Update, Patch, Response
+│   ├── routes/
+│   │   └── user_routes.py               # Endpoints REST del recurso /users
+│   ├── services/
+│   │   └── user_service.py              # Lógica CRUD sobre la base de datos
+│   └── dependencies/
+│       └── database_dependency.py       # Dependencia get_db() para inyección de sesión
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## Instalación
 
 ```bash
-# Clonar el repositorio
-git clone https://github.com/tu-usuario/device_systems.git
+git clone https://github.com/andresfelipe2552/device_systems.git
 cd device_systems
 
-# Crear entorno virtual (opcional pero recomendado)
 python -m venv .venv
 source .venv/bin/activate        # Linux/macOS
 .venv\Scripts\activate           # Windows
 
-# Instalar dependencias
 pip install -r requirements.txt
 ```
 
-> Si usas **uv**: `uv sync`
-
 ---
 
-## Ejecución del servidor
+## Ejecución
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-El servidor quedará disponible en: `http://127.0.0.1:8000`
+Servidor disponible en: `http://127.0.0.1:8000`
+
+> La base de datos `device_systems.db` se crea automáticamente al iniciar.
 
 ---
 
-## Tabla de endpoints
+## Endpoints
 
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| `GET` | `/users` | Lista todos los usuarios |
-| `GET` | `/users?role=admin` | Filtra por rol (`admin`, `support`, `user`) |
-| `GET` | `/users?is_active=true` | Filtra por estado activo/inactivo |
-| `GET` | `/users/{user_id}` | Obtiene un usuario por ID (path parameter) |
-| `POST` | `/users` | Registra un nuevo usuario |
+| Método   | Ruta                  | Descripción                               | Código éxito |
+|----------|-----------------------|-------------------------------------------|--------------|
+| `GET`    | `/users`              | Listar usuarios (con filtros y orden)     | 200          |
+| `GET`    | `/users/{user_id}`    | Obtener usuario por ID                    | 200          |
+| `POST`   | `/users`              | Crear nuevo usuario                       | 201          |
+| `PUT`    | `/users/{user_id}`    | Actualizar usuario completo               | 200          |
+| `PATCH`  | `/users/{user_id}`    | Actualizar usuario parcialmente           | 200          |
+| `DELETE` | `/users/{user_id}`    | Eliminar usuario                          | 204          |
 
----
+### Parámetros de query en GET /users
 
-## Ejemplos de peticiones
-
-### GET /users — listar todos los usuarios
-
-```http
-GET http://127.0.0.1:8000/users
-```
-
-**Respuesta 200:**
-```json
-[
-  { "id": 1, "name": "Carlos Ruiz", "email": "carlos.ruiz@device.com", "role": "admin", "is_active": true },
-  { "id": 2, "name": "María López", "email": "maria.lopez@device.com", "role": "support", "is_active": true }
-]
-```
+| Parámetro  | Tipo    | Descripción                                  |
+|------------|---------|----------------------------------------------|
+| `role`     | string  | Filtrar por rol: `admin`, `support`, `user`  |
+| `is_active`| boolean | Filtrar por estado: `true` / `false`         |
+| `order_by` | string  | Ordenar por: `name` / `created_at`           |
 
 ---
 
-### GET /users?role=admin — filtrar por rol
+## Manejo de errores
 
-```http
-GET http://127.0.0.1:8000/users?role=admin
-```
-
----
-
-### GET /users?is_active=false — filtrar por estado
-
-```http
-GET http://127.0.0.1:8000/users?is_active=false
-```
+| Caso                          | Código |
+|-------------------------------|--------|
+| Usuario creado                | 201    |
+| Consulta / actualización OK   | 200    |
+| Eliminación exitosa           | 204    |
+| Usuario no encontrado         | 404    |
+| Email duplicado               | 400    |
+| order_by inválido             | 400    |
+| Error de validación Pydantic  | 422    |
 
 ---
 
-### GET /users/{user_id} — obtener por ID
+## Validaciones (Pydantic v2)
 
-```http
-GET http://127.0.0.1:8000/users/1
-```
-
-**Respuesta 200:**
-```json
-{ "id": 1, "name": "Carlos Ruiz", "email": "carlos.ruiz@device.com", "role": "admin", "is_active": true }
-```
-
-**Respuesta 404 (ID inexistente):**
-```json
-{ "detail": "Usuario con id=99 no encontrado" }
-```
+| Campo       | Regla                                        |
+|-------------|----------------------------------------------|
+| `name`      | Obligatorio, mínimo 3 caracteres             |
+| `email`     | Formato válido (`EmailStr`)                  |
+| `role`      | Solo acepta: `admin`, `support`, `user`      |
+| `is_active` | Booleano (`true` / `false`)                  |
 
 ---
 
-### POST /users — crear usuario
+## Modelo SQLAlchemy vs Schema Pydantic
 
-```http
-POST http://127.0.0.1:8000/users
-Content-Type: application/json
+| Aspecto          | Modelo SQLAlchemy (`user_model.py`)              | Schema Pydantic (`user_schema.py`)                   |
+|------------------|--------------------------------------------------|------------------------------------------------------|
+| **Propósito**    | Representa la tabla en la base de datos          | Valida y serializa datos de entrada/salida de la API |
+| **Uso**          | ORM: consultas, inserciones, relaciones          | Contratos de la API: request body y response         |
+| **Validaciones** | Constraints de BD: `nullable`, `unique`, `index` | Reglas de negocio: longitud, formato, enum           |
+| **Ejemplo**      | `Column(String, unique=True, nullable=False)`    | `email: EmailStr`, `@field_validator`                |
 
-{
-  "name": "Laura Gómez",
-  "email": "laura.gomez@device.com",
-  "role": "support",
-  "is_active": true
-}
-```
-
-**Respuesta 201:**
-```json
-{ "id": 5, "name": "Laura Gómez", "email": "laura.gomez@device.com", "role": "support", "is_active": true }
-```
-
-**Respuesta 409 (correo duplicado):**
-```json
-{ "detail": "Ya existe un usuario con el correo 'laura.gomez@device.com'" }
-```
-
-**Respuesta 422 (validación fallida — nombre muy corto):**
-```json
-{
-  "detail": [
-    {
-      "type": "value_error",
-      "loc": ["body", "name"],
-      "msg": "Value error, El nombre debe tener mínimo 3 caracteres"
-    }
-  ]
-}
-```
+> **Clave:** el modelo ORM habla con la base de datos; el schema Pydantic habla con el cliente HTTP. Son capas separadas por diseño.
 
 ---
 
@@ -149,47 +126,20 @@ Cada respuesta incluye:
 
 ```
 X-App-Name: device_systems
-X-API-Version: 1.0
+X-API-Version: 2.0
 ```
-
----
-
-## Validaciones con Pydantic v2
-
-| Campo | Regla |
-|-------|-------|
-| `name` | Obligatorio, mínimo 3 caracteres |
-| `email` | Formato de correo válido (`EmailStr`) |
-| `role` | Solo acepta: `admin`, `support`, `user` |
-| `is_active` | Booleano (`true`/`false`) |
 
 ---
 
 ## Documentación interactiva
 
-Con el servidor corriendo, accede a:
+Con el servidor corriendo:
 
 - **Swagger UI:** `http://127.0.0.1:8000/docs`
-- **ReDoc:** `http://127.0.0.1:8000/redoc`
+- **ReDoc:**      `http://127.0.0.1:8000/redoc`
 
 ---
 
-## Estructura del proyecto
+## Reflexión — Importancia de la persistencia
 
-```
-device_systems/
-├── app/
-│   ├── main.py
-│   ├── schemas/
-│   │   └── user_schema.py
-│   └── routes/
-│       └── user_routes.py
-├── requirements.txt
-└── README.md
-```
-
----
-
-## Reflexión sobre FastAPI
-
-FastAPI demostró ser un framework muy productivo para construir APIs REST. La integración nativa con **Pydantic v2** elimina código repetitivo de validación: declarar un modelo es suficiente para obtener validación automática, documentación OpenAPI y serialización. Los **path parameters** y **query parameters** se declaran directamente en la firma de la función, lo que hace el código muy legible. La **documentación Swagger** generada automáticamente acelera enormemente las pruebas durante el desarrollo.
+La versión anterior almacenaba usuarios en listas Python que se perdían al reiniciar el servidor, lo que hace imposible cualquier uso real. Incorporar SQLAlchemy transforma la API en un sistema confiable: los datos sobreviven reinicios, se pueden consultar con filtros eficientes gracias a índices, y se garantiza integridad mediante constraints (`unique`, `nullable=False`). La separación entre modelo ORM y schema Pydantic también hace el código más mantenible: cada capa tiene una responsabilidad clara y se puede modificar de forma independiente.
