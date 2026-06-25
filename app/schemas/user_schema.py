@@ -1,28 +1,28 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from datetime import datetime
 from typing import Optional
 
 
 class UserCreate(BaseModel):
-    name: str
+    name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
-    phone: Optional[str] = None
+    phone: Optional[str] = Field(None, max_length=20)
 
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Ana Pérez",
                 "email": "ana@sena.edu.co",
                 "phone": "3001234567"
             }
         }
-    }
+    )
 
 
 class UserUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=2, max_length=100)
     email: Optional[EmailStr] = None
-    phone: Optional[str] = None
+    phone: Optional[str] = Field(None, max_length=20)
 
 
 class UserResponse(BaseModel):
@@ -30,9 +30,11 @@ class UserResponse(BaseModel):
     name: str
     email: str
     phone: Optional[str] = None
+    role: str
+    is_active: bool
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserBasic(BaseModel):
@@ -40,4 +42,4 @@ class UserBasic(BaseModel):
     name: str
     email: str
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)

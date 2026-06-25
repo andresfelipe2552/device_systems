@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing import Optional
 
@@ -7,17 +7,12 @@ from app.schemas.device_schema import DeviceBasic
 
 
 class LoanCreate(BaseModel):
-    user_id: int
-    device_id: int
+    user_id: int = Field(..., gt=0)
+    device_id: int = Field(..., gt=0)
 
-    model_config = {
-        "json_schema_extra": {
-            "example": {
-                "user_id": 1,
-                "device_id": 1
-            }
-        }
-    }
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"user_id": 1, "device_id": 1}}
+    )
 
 
 class LoanUpdate(BaseModel):
@@ -33,7 +28,7 @@ class LoanResponse(BaseModel):
     return_date: Optional[datetime] = None
     status: str
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LoanDetailResponse(BaseModel):
@@ -44,4 +39,4 @@ class LoanDetailResponse(BaseModel):
     user: UserBasic
     device: DeviceBasic
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)

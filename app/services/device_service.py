@@ -6,13 +6,7 @@ from app.models.device_model import Device
 from app.schemas.device_schema import DeviceCreate, DeviceUpdate
 
 
-def get_all_devices(
-    db: Session,
-    device_type: str = None,
-    is_available: bool = None,
-    brand: str = None,
-    search: str = None
-):
+def get_all_devices(db, device_type=None, is_available=None, brand=None, search=None):
     query = db.query(Device)
     if device_type:
         query = query.filter(Device.device_type.ilike(f"%{device_type}%"))

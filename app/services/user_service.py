@@ -4,6 +4,7 @@ from fastapi import HTTPException
 
 from app.models.user_model import User
 from app.schemas.user_schema import UserCreate, UserUpdate
+from app.auth.security import get_password_hash
 
 
 def get_all_users(db: Session, search: str = None):
@@ -29,7 +30,15 @@ def create_user(db: Session, data: UserCreate):
     existing = db.query(User).filter(User.email == data.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="El correo ya está registrado")
-    user = User(**data.model_dump())
+    # Usuario creado desde este endpoint tiene contraseña placeholder
+    user = User(
+        name=data.name,
+        email=data.email,
+        phone=data.phone,
+        hashed_password=get_password_hash("ChangeMe123"),
+        role="user",
+        is_active=True
+    )
     db.add(user)
     db.commit()
     db.refresh(user)

@@ -1,17 +1,17 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing import Optional
 
 
 class DeviceCreate(BaseModel):
-    name: str
-    serial_number: str
-    device_type: str
-    brand: Optional[str] = None
+    name: str = Field(..., min_length=2, max_length=100)
+    serial_number: str = Field(..., min_length=3, max_length=50)
+    device_type: str = Field(..., min_length=2, max_length=50)
+    brand: Optional[str] = Field(None, max_length=50)
     is_available: bool = True
 
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Laptop Lenovo ThinkPad",
                 "serial_number": "LEN-2024-001",
@@ -20,14 +20,14 @@ class DeviceCreate(BaseModel):
                 "is_available": True
             }
         }
-    }
+    )
 
 
 class DeviceUpdate(BaseModel):
-    name: Optional[str] = None
-    serial_number: Optional[str] = None
-    device_type: Optional[str] = None
-    brand: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=2, max_length=100)
+    serial_number: Optional[str] = Field(None, min_length=3, max_length=50)
+    device_type: Optional[str] = Field(None, min_length=2, max_length=50)
+    brand: Optional[str] = Field(None, max_length=50)
     is_available: Optional[bool] = None
 
 
@@ -40,7 +40,7 @@ class DeviceResponse(BaseModel):
     is_available: bool
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DeviceBasic(BaseModel):
@@ -49,4 +49,4 @@ class DeviceBasic(BaseModel):
     serial_number: str
     device_type: str
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
